@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Georgetown Domains</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+	  <script src="https://unpkg.com/vue@2.1.4/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/vue2-filters/0.1.9/vue2-filters.min.js"></script> <!--vue filtering -->
+
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+    <style type="text/css" media="screen">
+    .item {
+      position: relative;
+      padding: 10px 30px;
+      border: 5px solid #fff;
+    }
+    .site-info {
+      position: absolute;
+      top: 50%;
+      width: 100%;
+
+    }
+    .title,.description,.img-fluid, .postLink {
+      cursor: pointer;
+    }
+     .title,.description {
+      display: block;
+      width: 100%;
+      margin: 0;
+      padding: 0 15px;
+      background-color: #fff;
+      color: #6babe5;
+
+     }
+
+     .title {
+      font-size: 2em;
+      position: absolute;
+     } 
+
+     .description {
+      display: block;
+      position: absolute;
+      top: 40px;
+     }
+
+     .the-blog {
+      padding: 10px;
+     }
+
+    #foo\.bar {
+      background-color: red;
+    }
+
+    .site-move {
+      /* applied to the element when moving */
+      transition: transform .5s cubic-bezier(.55,0,.1,1);
+    }
+  
+    </style>
+</head>
+<body>
+
+
+
+<div id="sites" class="container">
+<button @click="searchText='cat_a'" >cat a</button>
+<button @click="searchText='cat_b'" >cat b</button>
+<button @click="searchText='cat_c'" >cat c</button>
+<button @click="searchText=''" >reset</button>
+
+
+<input v-model="searchText">
+  <div class="loading">
+      <i v-if="!sites" class="fa fa-spinner fa-spin"></i>
+  </div>
+  <div v-for="site in filterBy(sites, searchText) " :key="this.sites" class="col-md-4 the-blog item" id="sites" transition="site" :style="{backgroundColor: randomColor()}">
+      <a :href="theLink(site)" target="_blank" class="commit"> 
+        <div class="site-info">
+          <div class="title" v-html="theTitle(site)" ></div>
+          <div class="description" v-html="theDescription(site)"></div>
+        </div>  
+          <div>
+            <img class="img-fluid" :src="getThumbnail(site)" width="100%" height="auto"/>           
+          </div>
+      </a>
+    <div :data-url="theLink(site)" class="load" >
+         {{site.gsx$url.$t.substring(7)}}
+         <button @click="fetchPosts(site);select($event)" :id="theId(site)">Click me</button>
+
+    </div>    
+  </div>      
+</div>  
+
+
+<script type="text/javascript" charset="utf-8">
+
+//https://spreadsheets.google.com/feeds/list/1uwjcVEVP48JMcE-nUSNmn-ZLUE4ETX1rgTu5Lpjgb0A/1/public/values?alt=json
+// ID of the Google Spreadsheet
+var spreadsheetID = "1uwjcVEVP48JMcE-nUSNmn-ZLUE4ETX1rgTu5Lpjgb0A";
+                      
+// Make sure it is public or set to Anyone with link can view 
+var blogURL = "https://spreadsheets.google.com/feeds/list/" + spreadsheetID + "/1/public/values?alt=json";
+
+var blog = new Vue({
+  el: '#sites',
+  
+  data: {
+		sites: null,
+    posts: null,
+    searchText: null
+	},
+  
+  watch: {
+		currentPage: 'fetchSites',
+    currentPage: 'fetchPosts',
+    currentPage: 'searchBy'
+	},
+
+  created: function () {
+    this.fetchSites()
+  },
+  
+
+  methods: {
+    fetchSites: function () {
+      var xhr = new XMLHttpRequest()
+      var self = this
+      xhr.open('GET', blogURL  )
+      xhr.onload = function () {
+        self.sites = JSON.parse(xhr.responseText)
+        self.sites = self.sites.feed.entry        
+      }
+      xhr.send()
+    },
+        
+    theTitle: function(site) {
+      return site.gsx$title.$t;
+    },
+
+    theLink: function(site) {
+      return site.gsx$url.$t
+    },
+
+    theId: function(site){
+      var shortUrl = site.gsx$url.$t.substring(7)
+      return shortUrl
+    },
+
+
+    theDescription: function(site){
+      return site.gsx$description.$t;
+    },
+
+    getThumbnail: function(site){
+      var stem = site.gsx$url.$t
+      stem = stem.substring(7)
+      return 'screenshots/' + stem + '.jpeg'
+    },
+
+    fetchPosts: function(post) {
+      var postsUrl = post.gsx$url.$t + '/wp-json/wp/v2/posts/?per_page=3'
+      console.log(postsUrl)
+      var xhr = new XMLHttpRequest()
+      xhr.timeout = 2000 // time in milliseconds
+      var sitePosts = this
+      xhr.open('GET', postsUrl  )
+      xhr.onload = function () {
+        sitePosts.posts = JSON.parse(xhr.responseText)                
+      }
+      xhr.send(null)
+      alert(sitePosts.posts)
+      return sitePosts.posts      
+      
+    },
+
+    postTitle: function(thePosts){
+      return sitePosts.posts[0].title.rendered
+    },
+
+    select: function(event){
+      targetId = event.currentTarget.id
+      console.log('id =' +targetId)
+    },
+
+    writePosts: function(id){
+      document.getElementById(id).innerHTML = "New text!";
+    },
+
+    searchBy: function(cat){
+      searchText = cat
+      console.log(searchText)      
+      return searchText
+
+    },
+
+    randomColor: function(){
+      bgColors = ['#72984b', '#e1261c', '#8a2432', '#b9d9ec', '#f9e08e ']
+      var rand = Math.floor(Math.random() * bgColors.length);
+      return bgColors[rand];
+    }
+
+  },
+  mounted() {
+    var buttons = this.$el.getElementsByClassName('load');
+    console.log(buttons);
+    for (i = 0; i < buttons.length; i++){
+      var url = buttons[i].dataset.url;
+      console.log(url);
+    }
+  }
+
+ 
+});
+
+
+</script>
+
+</body>
+</html>
